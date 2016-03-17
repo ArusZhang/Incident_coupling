@@ -859,7 +859,7 @@ if caseType=='TMT':
 if caseType=='Best':
     # v3.1 FLOWDIS_Best
     flowrate=[376.036,337.066,326.974,314.787,305.243,304.359,309.757,320.404,331.231,342.67,356.585,376.185,336.261,323.539,312.753,304.171,302.451,308.971,320.31,331.468,342.191,356.568]
-if ((caseType<>'original') and (caseType<>'coke') and (caseType<>'COT') and (caseType<>'PE') and (caseType<>'TMT') and (caseType<>'Best')):
+if ((caseType<>'original') and (caseType<>'original10M') and (caseType<>'original10L') and (caseType<>'coke') and (caseType<>'COT') and (caseType<>'PE') and (caseType<>'TMT') and (caseType<>'Best')):
     print 'caseType is not valid, please select one of the following: original, coke, COT, PE'
     sys.exit()
 #--------------------------Simulation settings--------------------------#
