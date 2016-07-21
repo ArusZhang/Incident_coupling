@@ -2,7 +2,7 @@ import xlrd,shutil,time,math,sys,subprocess,xlwt,csv,numpy as np,os
 from numpy import *
 
 def GetInputVariables():
-    wb_incidentR = xlrd.open_workbook('input_variables_'+COILSIM_version+'.xlsx')
+    wb_incidentR = xlrd.open_workbook('input_variables_'+COILSIM_version+'_'+caseType+'.xlsx')
     try:
         sheet_incidentR = wb_incidentR.sheet_by_name(u'incidentR')
     except:
@@ -313,7 +313,7 @@ def simulateReactors():
                     x0[i]=x1[i]
                     x1[i]=xnew[i]
                 if COP[i]<1.2:
-                    x1[i]=5
+                    x1[i]=10
 
             
         #Make simulation folders in %appdata%
@@ -950,12 +950,12 @@ if not os.path.exists(workdir): print('Working directory does not exist!')
 
 # template directory where the raw files needed for the simulation are stored
 global templatedir
-templatedir=os.path.join(datdir,'v3.1 template propane') #----------------------------------------change this
+templatedir=os.path.join(datdir,'template original - Copy')                        #----------------------------------------change this
 print templatedir
 if not os.path.exists(templatedir): print('Template directory does not exist!')
 
 # heat flux source
-HeatFluxProfileTemplate='HuajinUSC_heatflux_propane_coke_it4.xls' #----------------------------------------change this
+HeatFluxProfileTemplate='HuajinUSC_heatflux_original_it5.xls'               #----------------------------------------change this
 #--------------------------Set paths for whole routine--------------------------#
 
 
@@ -987,7 +987,7 @@ global T_fluegas
 global T_fluegas_base
 global IncidentLowerLimit
 global IncidentUpperLimit
-T_fluegas_base=1368.71875
+T_fluegas_base=1368.6586                                                    #----------------------------------------change this
 T_fluegas=1380.0
 
 # heat release from the base case (kW)
@@ -1001,7 +1001,7 @@ Basic_fluegas_flow=725.821542
 
 # ------ values may need to change ------ #
 # flow type
-caseType='coke'    # Options: 'original','coke','COT','PE'
+caseType='original'    # Options: 'original','coke','COT','PE'              #----------------------------------------change this
 
 # !!!!!!!!!!!!!!! correction for v3.1 - this is because the coking rate calculation in version 3.1 is not correct!!!!!!!!!!!!!!!!!!
 ResultsFilenameV31='Reactor_Results_template.xls'   # name of the result.xls in the template folder
@@ -1010,19 +1010,19 @@ ResultsFilenameV31='Reactor_Results_template.xls'   # name of the result.xls in 
 CouplingCorrections=False
 
 # the timestep that the simulation starts from
-startTimestep=0                               #----------------------------------------change this
+startTimestep=0                                                             #----------------------------------------change this
 
 # simulation type
-RunLengthSim=False     # 'True' perform run length simulation; 'False' no run length simulation will be performed;
-OneTimeSimulation=True  # 'True' when the simulation is performed only once with heat flux from external source
+RunLengthSim=True     # 'True' perform run length simulation; 'False' no run length simulation will be performed;
+OneTimeSimulation=False  # 'True' when the simulation is performed only once with heat flux from external source
 
 # parameters only for run length simulation
 CoulpedSim=True       # 'True' coupled run length simulation; 'False' standalone run length simulation;
 timestepinterval=200  # the interval of timestep [h]
 Maxstep=50               # maximum run length step
-cora=0.50               # coking rate scaling factor
+cora=1.00               # coking rate scaling factor
 TMTmax=1125             # end-of-run criteria TMT
-CIPmaximum=5.46         # end-of-run criteria CIP
+CIPmaximum=15.46         # end-of-run criteria CIP
 # ------ values may need to change ------ #
 
 # assign values for different flow types
