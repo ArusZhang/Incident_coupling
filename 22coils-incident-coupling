@@ -2,29 +2,29 @@ import xlrd,shutil,time,math,sys,subprocess,xlwt,csv,numpy as np,os
 from numpy import *
 
 def GetInputVariables():
-    wb_incidentR = xlrd.open_workbook('input_variables.xlsx')
+    wb_incidentR = xlrd.open_workbook('input_variables_'+COILSIM_version+'.xlsx')
     try:
         sheet_incidentR = wb_incidentR.sheet_by_name(u'incidentR')
     except:
         print 'no sheet named incidentR'
     # incident radiation on inlet tubes
     for i in range(1, 51):
-        for j in range(0, nreac+2):
+        for j in range(0, 2*nreac+1):
             if j==0:
                 x_position_inlet[i-1] = sheet_incidentR.cell(i, j).value
-            elif j==23:
-                ConvRadratio_inlet[i-1] = sheet_incidentR.cell(i, j).value
-            else:  
+            elif j<23:
                 incidentR_inlet[j-1][i-1] = sheet_incidentR.cell(i, j).value
+            else:
+                ConvRadratio_inlet[j-23][i-1] = sheet_incidentR.cell(i, j).value
     # incident radiation on outlet tubes
     for i in range(52, 102):
-        for j in range(0, nreac+2):
+        for j in range(0, 2*nreac+1):
             if j==0:
                 x_position_outlet[i-52] = sheet_incidentR.cell(i, j).value
-            elif j==23:
-                ConvRadratio_outlet[i-52] = sheet_incidentR.cell(i, j).value
-            else:  
+            elif j<23:
                 incidentR_outlet[j-1][i-52] = sheet_incidentR.cell(i, j).value
+            else:
+                ConvRadratio_outlet[j-23][i-52] = sheet_incidentR.cell(i, j).value
     
     if CouplingCorrections==True:
         # incident factor of inlet tubes
@@ -208,6 +208,16 @@ def getPEinit():
             rownumber+=1
     return np.sum(np.multiply(np.divide([float(i) for i in C3H6],[float(i) for i in C2H4]),flowrate[0:(nreac)])/np.sum(flowrate[0:(nreac)]))
     
+def getPEinit3(filename):
+    src=os.path.join(templatedir,filename)
+    wb_results = xlrd.open_workbook(src)
+    try:
+        sheet_results = wb_results.sheet_by_name(u'Statistics')
+    except:
+        print 'no sheet named Statistics'
+    PE=sheet_results.cell(5, 4).value
+    return PE
+    
 def getPE():
     #obtain P/E for each reactor
     C2H4 = [None for q in xrange(nreac)]
@@ -380,10 +390,10 @@ def simulateReactors():
             f.write('USC\Huajin'+nr+'\n')
         f.close()
         #Change directory and run COILSIM
-        # for version 2 and 3.1
-        subprocess.call(['C:\Users\yuzhan\AppData\Roaming\coilsim1D\Coilsim.exe'])
-        # for version 3.2 and 3.7
-        #subprocess.call(['C:\ProgramData\COILSIM1D\Coilsim.exe'])
+        if (COILSIM_version=='v2' or COILSIM_version=='v3.1'):
+            subprocess.call(['C:\Users\yuzhan\AppData\Roaming\coilsim3d\Coilsim.exe'])
+        elif (COILSIM_version=='v3.2' or COILSIM_version=='v3.7'):
+            subprocess.call(['C:\ProgramData\coilsim3d\Coilsim.exe'])
 
         
         #Read COP and compare with COP setpoint to get new CIP
@@ -475,6 +485,8 @@ def getTMT():
     return externalT
 
 def writeResults(filename):
+    global T_fluegas
+    global Q_absorb
     #Copy results folders to desktop folder
     #Make folder for results for this iteration (delete if already exists)
     if CoulpedSim==True:
@@ -600,7 +612,7 @@ def writeResults(filename):
                 sheet2.write(j,i+1,float(processgasT[i][j]))
                 sheet4.write(j,i+1,float(processgasP[i][j]))
                 sheet5.write(j,i+1,float(cokingRate[i][j]))
-                if Correction_v31==True:
+                if COILSIM_version=='v3.1':
                     sheet6.write(j,i+1,float(cokeThickness[i][j-1]))
                 else:
                     sheet6.write(j,i+1,float(cokeThick[i][j]))
@@ -627,6 +639,10 @@ def writeResults(filename):
     sheet8.write(3,0,'Total heat flux per reactor [kW]')
     sheet8.write(5,0,'Mixing cup average P/E')
     sheet8.write(6,0,'Total heat input to all reactors [kW]')
+    sheet8.write(8,0,'Flue gas outlet temperature [K]')
+    sheet8.write(9,0,'Total heat absorbed by all reactors [kW]')
+    sheet8.write(11,0,'Fuel flow rate scaling ratio')
+    sheet8.write(12,0,'Incident radiation scaling ratio')
     
     for i in range(nreac):
         sheet8.write(0,i+4,(i+1))
@@ -639,6 +655,10 @@ def writeResults(filename):
     sheet8.write(5,4,float(PEaverage))
     TotalHeat=sum(HeatFluxTotal)
     sheet8.write(6,4,float(TotalHeat))
+    sheet8.write(8,4,float(T_fluegas))
+    sheet8.write(9,4,float(Q_absorb))
+    sheet8.write(11,4,float(FuelScalingRatio))
+    sheet8.write(12,4,float(IncidentScalingRatio))
         
     wbk.save(os.path.join(newpath,filename))
     
@@ -683,8 +703,9 @@ def Generate_heatflux(coil_num,filename):
                 heatflux_outlet[i][j]=WallEmissivity*(new_incidentR_outlet*IncidentScalingRatio-StefanBoltzmann*Temp_outlet**4)+HTC_outlet[i][j]*(new_Tg_outlet-Temp_outlet)
             else:
                 # calculate heat flux
-                heatflux_inlet[i][j]=WallEmissivity*(incidentR_inlet[i][j]*IncidentScalingRatio-StefanBoltzmann*Temp_inlet**4)*(1.0+ConvRadratio_inlet[j])
-                heatflux_outlet[i][j]=WallEmissivity*(incidentR_outlet[i][j]*IncidentScalingRatio-StefanBoltzmann*Temp_outlet**4)*(1.0+ConvRadratio_outlet[j])
+                heatflux_inlet[i][j]=WallEmissivity*(incidentR_inlet[i][j]*IncidentScalingRatio-StefanBoltzmann*Temp_inlet**4)*(1.0+ConvRadratio_inlet[i][j])
+                heatflux_outlet[i][j]=WallEmissivity*(incidentR_outlet[i][j]*IncidentScalingRatio-StefanBoltzmann*Temp_outlet**4)*(1.0+ConvRadratio_outlet[i][j])
+    
     
     # convert the axial positions
     x_inlet = zeros(50)
@@ -695,7 +716,6 @@ def Generate_heatflux(coil_num,filename):
     writebook = xlwt.Workbook(encoding="utf-8")
     writesheet = writebook.add_sheet('heatflux_profile_innerwall')
     # loop all the coil and value of heatflux
-    print
     for col in range(0, coil_num):
         for row in range(0, 50):
             x_inlet[row] = x_position_inlet[row]
@@ -738,10 +758,157 @@ def Generate_heatflux(coil_num,filename):
             writesheet.write(row+50+2, col*3+1, y_outlet[row])
     writebook.save(os.path.join(results_dir,filename))
 
+def Furnace_estimation(coil_num,filename):
+    # estimate heat balance in the furnace and obtain flue gas outlet temperature, absorbed heat by the reactor coils, and corresponding
+    global T_fluegas
+    global Q_absorb
+    # define axial position and internal heat flux
+    x_pos = zeros(100)
+    y_pos = zeros(100)
+    heat_absorbed_coil = zeros(coil_num)
+    # open heat flux book
+    if FirstTime==True:
+        workbook = xlrd.open_workbook(os.path.join(datdir,filename))
+    else:
+        workbook = xlrd.open_workbook(os.path.join(results_dir,filename))
+    try:
+        mysheet = workbook.sheet_by_name(u'heatflux_profile_innerwall')
+    except:
+        print 'no sheet named heatflux_profile_innerwall'
+        return
+    
+    # start calculating the total absorbed heat in all reactor coils (w/m2)
+    Q_absorb=0
+    for i in range(0, coil_num):
+        for j in range(0, 100):
+            x_pos[j]=mysheet.cell(j+2, 3*i).value
+            y_pos[j]=mysheet.cell(j+2, 3*i+1).value
+            if j==0:
+                heat_absorbed_coil[i]=heat_absorbed_coil[i]+x_pos[j]*y_pos[j]*3.141592654*0.045
+            else:
+                # inlet coils
+                if x_pos[j-1]<12.59195:
+                    heat_absorbed_coil[i]=heat_absorbed_coil[i]+(x_pos[j]-x_pos[j-1])*y_pos[j-1]*3.141592654*0.045
+                # outlet coils
+                else:
+                    heat_absorbed_coil[i]=heat_absorbed_coil[i]+(x_pos[j]-x_pos[j-1])*y_pos[j-1]*3.141592654*0.051
+        # the last segment
+        heat_absorbed_coil[i]=heat_absorbed_coil[i]+(22.79195-x_pos[99])*y_pos[99]*3.141592654*0.051
+        Q_absorb=Q_absorb+heat_absorbed_coil[i]
+    # total absorbed heat (kw/m2)
+    Q_absorb=Q_absorb/1000.0
+    
+    # current heat release
+    Q_heat_release=Basic_heat_release*FuelScalingRatio
+    # percentage of heat loss through furnace refractory
+    Q_loss=0.01*Q_heat_release
+    # calculate heat taken away by the flue gas
+    Q_fluegas=Q_heat_release-Q_loss-Q_absorb
+    
+    # parameters for enthalpy calculation
+    N2_para_high=[2.95257637E+00,1.39690040E-03,-4.92631603E-07,7.86010195E-11,-4.60755204E-15,-9.23948688E+02,5.87188762E+00]
+    N2_para_low=[3.53100528E+00,-1.23660988E-04,-5.02999433E-07,2.43530612E-09,-1.40881235E-12,-1.04697628E+03,2.96747038E+00]
+    O2_para_high=[3.66096065E+00,6.56365811E-04,-1.41149627E-07,2.05797935E-11,-1.29913436E-15,-1.21597718E+03,3.41536279E+00]
+    O2_para_low=[3.78245636E+00,-2.99673416E-03,9.84730201E-06,-9.68129509E-09,3.24372837E-12,-1.06394356E+03,3.65767573E+00]
+    CO2_para_high=[4.63651110E+00,2.74145690E-03,-9.95897590E-07,1.60386660E-10,-9.16198570E-15,-4.90249040E+04,-1.93489550E+00]
+    CO2_para_low=[2.35681300E+00,8.98412990E-03,-7.12206320E-06,2.45730080E-09,-1.42885480E-13,-4.83719710E+04,9.90090350E+00]
+    H2O_para_high=[2.67703890E+00,2.97318160E-03,-7.73768890E-07,9.44335140E-11,-4.26899910E-15,-2.98858940E+04,6.88255000E+00]
+    H2O_para_low=[4.19863520E+00,-2.03640170E-03,6.52034160E-06,-5.48792690E-09,1.77196800E-12,-3.02937260E+04,-8.49009010E-01]
+    
+    b_upper=0.0
+    b_lower=0.0
+    loop_end=True
+    while loop_end==True:
+        E_N2=0
+        E_O2=0
+        E_CO2=0
+        E_H2O=0
+        for i in range(0,6):
+            if T_fluegas>1000:
+                if i<5:
+                    E_N2=E_N2+N2_para_high[i]*T_fluegas**(i+1)/(i+1)
+                    E_O2=E_O2+O2_para_high[i]*T_fluegas**(i+1)/(i+1)
+                    E_CO2=E_CO2+CO2_para_high[i]*T_fluegas**(i+1)/(i+1)
+                    E_H2O=E_H2O+H2O_para_high[i]*T_fluegas**(i+1)/(i+1)
+                else:
+                    E_N2=E_N2+N2_para_high[i]
+                    E_O2=E_O2+O2_para_high[i]
+                    E_CO2=E_CO2+CO2_para_high[i]
+                    E_H2O=E_H2O+H2O_para_high[i]
+            else:
+                if i<5:
+                    E_N2=E_N2+N2_para_low[i]*T_fluegas**(i+1)/(i+1)
+                    E_O2=E_O2+O2_para_low[i]*T_fluegas**(i+1)/(i+1)
+                    E_CO2=E_CO2+CO2_para_low[i]*T_fluegas**(i+1)/(i+1)
+                    E_H2O=E_H2O+H2O_para_low[i]*T_fluegas**(i+1)/(i+1)
+                else:
+                    E_N2=E_N2+N2_para_low[i]
+                    E_O2=E_O2+O2_para_low[i]
+                    E_CO2=E_CO2+CO2_para_low[i]
+                    E_H2O=E_H2O+H2O_para_low[i]
+                    
+        # enthalpy difference (kJ/kmol) between T_fluegas and reference temperature (298.15 K)
+        E_N2=(E_N2*8.3145-0.0)*0.7193
+        E_O2=(E_O2*8.3145-0.0)*0.0174
+        E_CO2=(E_CO2*8.3145+393510.0)*0.0844
+        E_H2O=(E_H2O*8.3145+241826.0)*0.1789
+        # total enthalpy per unit molar flow rate
+        E_total=E_N2+E_O2+E_CO2+E_H2O
+        
+        # flue gas molar flow rate (kmol/s)
+        Flow_fluegas=Basic_fluegas_flow*FuelScalingRatio/3600
+        # enthalpy of the flue gas at temperature of T_fluegas
+        Q_fluegas_underT=Flow_fluegas*E_total
+        # error
+        delta_error=Q_fluegas_underT-Q_fluegas
+        
+        if abs(delta_error)<0.1:
+            break
+        if delta_error>0.0:
+            b_upper=T_fluegas
+            if b_lower==0.0:
+                T_fluegas=T_fluegas-10.0
+            else:
+                T_fluegas=(b_upper+b_lower)/2.0
+        if delta_error<0.0:
+            b_lower=T_fluegas
+            if b_upper==0.0:
+                T_fluegas=T_fluegas+10.0
+            else:
+                T_fluegas=(b_upper+b_lower)/2.0
+        if ( (T_fluegas<200) or (T_fluegas>6000) ):
+            print 'warning: flue gas temperature T: '+ str(T_fluegas) + '  out of the range'
+    #print 'Flue gas outlet temperature:  ' + str(T_fluegas) + ' K'
 
 
-
-
+def IncidentRadiationScalingFactor(caseType,timestep,iterationPE,iterationTMT):
+    # calculate the scaling of incident radiation based on the temperature change
+    global T_fluegas
+    global T_fluegas_base
+    global IncidentScalingRatio
+    global IncidentLowerLimit
+    global IncidentUpperLimit
+    # difference of the two flue gas outlet temperatures
+    deltaT=T_fluegas-T_fluegas_base
+    IncidentScalingRatio_update=1.0+4*deltaT/T_fluegas_base+6*(deltaT/T_fluegas_base)**2+4*(deltaT/T_fluegas_base)**3+(deltaT/T_fluegas_base)**4
+    RatioDifference=IncidentScalingRatio_update-IncidentScalingRatio
+    #print IncidentScalingRatio_update
+    #print 'difference' + str(RatioDifference)
+    # incident radiation should be smaller
+    if RatioDifference<0.0:
+        IncidentUpperLimit=IncidentScalingRatio
+        if IncidentLowerLimit==0.0:
+            IncidentScalingRatio=IncidentScalingRatio-0.01
+        else:
+            IncidentScalingRatio=(IncidentLowerLimit+IncidentUpperLimit)/2.0
+    # incident radiation should be larger
+    else:
+        IncidentLowerLimit=IncidentScalingRatio
+        if IncidentUpperLimit==0.0:
+            IncidentScalingRatio=IncidentScalingRatio+0.01
+        else:
+            IncidentScalingRatio=(IncidentLowerLimit+IncidentUpperLimit)/2.0
+    #print 'IncidentScalingRatio_'+str(caseType)+'_incident_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'_it'+str(iterationTMT)+':   '+str(IncidentScalingRatio)
 
 
 
@@ -755,6 +922,10 @@ def Generate_heatflux(coil_num,filename):
 
 
 #--------------------------Set paths for whole routine--------------------------#
+
+# COILSIM version used " v2, v3.1, v3.2, v3.7 "
+COILSIM_version='v3.1'
+
 # data directory
 global datdir
 datdir='C:\\work\\5 USCfurnace Simulation\\run'
@@ -767,21 +938,24 @@ if not os.path.exists(results_dir): print('Folder of results does not exist!')
 
 # working directory where COILSIM.exe is located
 global workdir
-# for version 2 and 3.1
-workdir='C:\\Users\\yuzhan\\AppData\\Roaming\\coilsim1D'
-# for version 3.2 and 3.7
-#workdir='C:\\ProgramData\\COILSIM1D'
+if (COILSIM_version=='v2' or COILSIM_version=='v3.1'):
+    workdir='C:\\Users\\yuzhan\\AppData\\Roaming\\coilsim3d'
+elif (COILSIM_version=='v3.2' or COILSIM_version=='v3.7'):
+    workdir='C:\\ProgramData\\coilsim3d'
+else:
+    print "COILSIM version:  "+COILSIM_version+" does not exist"
+    sys.exit()
 
 if not os.path.exists(workdir): print('Working directory does not exist!')
 
 # template directory where the raw files needed for the simulation are stored
 global templatedir
-templatedir=os.path.join(datdir,'v3.1 template') #----------------------------------------change this
+templatedir=os.path.join(datdir,'v3.1 template propane') #----------------------------------------change this
 print templatedir
 if not os.path.exists(templatedir): print('Template directory does not exist!')
 
 # heat flux source
-HeatFluxProfileTemplate='111111111111original_it5.xls' #----------------------------------------change this
+HeatFluxProfileTemplate='HuajinUSC_heatflux_Propane_template.xls' #----------------------------------------change this
 #--------------------------Set paths for whole routine--------------------------#
 
 
@@ -804,12 +978,32 @@ heatFluxRatio=1
 # Note!!! for version 3.7 the default value is 1.04, for version 3.1 the value is 1
 IncidentScalingRatio=1
 
+# furnace section
+FuelScalingRatio=0.95
+
+# temperature of flue gas
+global Q_absorb
+global T_fluegas
+global T_fluegas_base
+global IncidentLowerLimit
+global IncidentUpperLimit
+T_fluegas_base=1368.71875
+T_fluegas=1380.0
+
+# heat release from the base case (kW)
+Basic_heat_release=14157.0
+
+# flue gas molar flow rate from the base case (kmol/s)
+Basic_fluegas_flow=725.821542
+
+
+
+
 # ------ values may need to change ------ #
 # flow type
-caseType='original'    # Options: 'original','coke','COT','PE'
+caseType='Propane'    # Options: 'original','coke','COT','PE'
 
-# !!!!!!!!!!!!!!! correction for v3.1 - this is because the coking rate calculation in version 3.1 is not correct!!!!!!!!!!!!!!!!!! 
-Correction_v31=True
+# !!!!!!!!!!!!!!! correction for v3.1 - this is because the coking rate calculation in version 3.1 is not correct!!!!!!!!!!!!!!!!!!
 ResultsFilenameV31='Reactor_Results_template.xls'   # name of the result.xls in the template folder
 
 # introduce correction factors at different TMT in the heat flux calculation
@@ -819,24 +1013,26 @@ CouplingCorrections=False
 startTimestep=0                               #----------------------------------------change this
 
 # simulation type
-RunLengthSim=True      # 'True' perform run length simulation; 'False' no run length simulation will be performed;
+RunLengthSim=True     # 'True' perform run length simulation; 'False' no run length simulation will be performed;
 OneTimeSimulation=False  # 'True' when the simulation is performed only once with heat flux from external source
 
 # parameters only for run length simulation
-CoulpedSim=True        # 'True' coupled run length simulation; 'False' standalone run length simulation;
-timestepinterval=50     # the interval of timestep [h]
+CoulpedSim=True       # 'True' coupled run length simulation; 'False' standalone run length simulation;
+timestepinterval=50  # the interval of timestep [h]
 Maxstep=50               # maximum run length step
 cora=0.50               # coking rate scaling factor
 TMTmax=1125             # end-of-run criteria TMT
-CIPmaximum=4.46         # end-of-run criteria CIP
+CIPmaximum=5.46         # end-of-run criteria CIP
 # ------ values may need to change ------ #
 
 # assign values for different flow types
+if caseType=='Propane':
+    flowrate=[312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636] #Propane
 if caseType=='original':
     flowrate=[329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090] #ORIGINAL
-if caseType=='original10M':
+if caseType=='original10+':
     flowrate=[361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999] #ORIGINAL10M
-if caseType=='original10L':
+if caseType=='original10-':
     flowrate=[296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181] #ORIGINAL10L
 if caseType=='coke':
     # v3.1 FLOWDIS_coking
@@ -859,7 +1055,7 @@ if caseType=='TMT':
 if caseType=='Best':
     # v3.1 FLOWDIS_Best
     flowrate=[376.036,337.066,326.974,314.787,305.243,304.359,309.757,320.404,331.231,342.67,356.585,376.185,336.261,323.539,312.753,304.171,302.451,308.971,320.31,331.468,342.191,356.568]
-if ((caseType<>'original') and (caseType<>'original10M') and (caseType<>'original10L') and (caseType<>'coke') and (caseType<>'COT') and (caseType<>'PE') and (caseType<>'TMT') and (caseType<>'Best')):
+if ((caseType<>'Propane') and (caseType<>'original') and (caseType<>'original10+') and (caseType<>'original10-') and (caseType<>'coke') and (caseType<>'COT') and (caseType<>'PE') and (caseType<>'TMT') and (caseType<>'Best')):
     print 'caseType is not valid, please select one of the following: original, coke, COT, PE'
     sys.exit()
 #--------------------------Simulation settings--------------------------#
@@ -895,8 +1091,8 @@ x_position_inlet = zeros(50)
 x_position_outlet = zeros(50)
 incidentR_inlet = zeros((nreac,50))
 incidentR_outlet = zeros((nreac,50))
-ConvRadratio_inlet = zeros(50)
-ConvRadratio_outlet = zeros(50)
+ConvRadratio_inlet = zeros((nreac,50))
+ConvRadratio_outlet = zeros((nreac,50))
 
 if CouplingCorrections==True:
     global InciFactor_inlet
@@ -950,7 +1146,7 @@ COILSIMheatflux=readHeatFluxData(HeatFluxProfileTemplate,isheatfluxtemplate)
 global cokeThickness
 cokeThickness=[[0.0 for q in xrange(naxial)] for p in xrange(nreac)]
 
-if Correction_v31==True:
+if COILSIM_version=='v3.1':
     cokeThickness=getInitialCokingThicknessV31(ResultsFilenameV31)
 else:
     cokeThickness=getInitialCokingThickness()
@@ -962,8 +1158,10 @@ if RunLengthSim==True:
     print "start run length simulation"
     IterationTimestep=1
     # get previous P/E as shooting targer for next timestep
-    PEinit=getPEinit()
+    #PEinit=getPEinit()
+    PEinit=getPEinit3(ResultsFilenameV31)
     print PEinit
+    OneTimeSimulation=False
 else:
     print "start steady state simulation"
     IterationTimestep=0
@@ -982,6 +1180,7 @@ while RunLengthLoopConv==False:
     #---------------- P/E loop ----------------#
     PELoopConv=False
     iterationPE=0
+    FirstTime=True
     while PELoopConv==False:
         if RunLengthSim==True:
             print "P/E iteration: " + str(iterationPE)
@@ -996,6 +1195,12 @@ while RunLengthLoopConv==False:
                 print "    TMT iteration: " + str(iterationTMT)
                 CIP=simulateReactors()
                 print CIP
+                # calculate the furnace section
+                if FirstTime==True:
+                    Furnace_estimation(nreac,HeatFluxProfileTemplate)
+                    FirstTime=False
+                else:
+                    Furnace_estimation(nreac,HeatFluxProfileSource)
                 writeResults('Reactor_Results_'+str(caseType)+'_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'_it'+str(iterationTMT)+'.xls')
                 # first iteration (one more simulation is necessary)
                 if iterationTMT==0:
@@ -1033,9 +1238,29 @@ while RunLengthLoopConv==False:
                 writeTMTprofile('TMTprofile_'+str(caseType)+'_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'_it'+str(iterationTMT+1)+'.xls')
                 # calculate coefficients of the polynomial used in TMT
                 Generate_walltemp_coefficient(nreac,naxial,'TMTprofile_'+str(caseType)+'_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'_it'+str(iterationTMT+1)+'.xls')
-                # calculate heat flux profile
-                HeatFluxProfileSource='HuajinUSC_heatflux_'+str(caseType)+'_incident_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'_it'+str(iterationTMT+1)+'.xls'
-                Generate_heatflux(nreac,HeatFluxProfileSource)
+                
+                # furnace calculation
+                FurnaceHeatBalance=False
+                T_fluegas_old=0.0
+                IncidentUpperLimit=0.0
+                IncidentLowerLimit=0.0
+                while FurnaceHeatBalance==False:
+                    # calculate heat flux profile
+                    HeatFluxProfileSource='HuajinUSC_heatflux_'+str(caseType)+'_incident_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'_it'+str(iterationTMT+1)+'.xls'
+                    Generate_heatflux(nreac,HeatFluxProfileSource)
+                    # calculate the furnace section
+                    Furnace_estimation(nreac,HeatFluxProfileSource)
+                    # check if the furnace heat balance is converged
+                    BalanceError=abs(T_fluegas-T_fluegas_old)
+                    if BalanceError<0.5:
+                        print 'T_flue:  ' + str(T_fluegas)
+                        print 'Incident Radiation:  ' + str(IncidentScalingRatio)
+                        break
+                    else:
+                        T_fluegas_old=T_fluegas
+                    # calculate incident radiation scaling factor
+                    IncidentRadiationScalingFactor(caseType,timestep,iterationPE,iterationTMT+1)
+                
                 # read heat flux from previous results
                 isheatfluxtemplate=False
                 COILSIMheatflux=readHeatFluxData(HeatFluxProfileSource,isheatfluxtemplate)
@@ -1048,6 +1273,10 @@ while RunLengthLoopConv==False:
         else:
             CIP=simulateReactors()
             print CIP
+            T_fluegas=0.0
+            Q_absorb=0.0
+            FuelScalingRatio=0.0
+            IncidentScalingRatio=0.0
             writeResults('Reactor_Results_'+str(caseType)+'_timestep'+str(timestep)+'_PEloop'+str(iterationPE)+'.xls')
         
         # calculate mixing-cup P/E
@@ -1066,10 +1295,14 @@ while RunLengthLoopConv==False:
             # first iteration, set a fixed value of scaling ratio
             if iterationPE==0:
                 # coupled simulation
+                #if CoulpedSim==True:
+                #    IncidentScalingRatio_old=IncidentScalingRatio
+                #    IncidentScalingRatio=IncidentScalingRatio+0.01
+                #    print "Incident radiation ratio:  " + str(IncidentScalingRatio)
                 if CoulpedSim==True:
-                    IncidentScalingRatio_old=IncidentScalingRatio
-                    IncidentScalingRatio=IncidentScalingRatio+0.01
-                    print "Incident radiation ratio:  " + str(IncidentScalingRatio)
+                    FuelScalingRatio_old=FuelScalingRatio
+                    FuelScalingRatio=FuelScalingRatio+0.01
+                    print "Fuel flow rate scaling ratio:  " + str(FuelScalingRatio)
                 # uncoupled simulation
                 else:
                     heatFluxRatio_old=heatFluxRatio
@@ -1077,11 +1310,16 @@ while RunLengthLoopConv==False:
                     print "Heat flux ratio:  " + str(heatFluxRatio)
             else:
                 # coupled simulation
+                #if CoulpedSim==True:
+                #    IncidentScalingRatio_new=IncidentScalingRatio+(IncidentScalingRatio_old-IncidentScalingRatio)/(PEold-PEcurrent)*(PEinit-PEcurrent)
+                #    IncidentScalingRatio_old=IncidentScalingRatio
+                #    IncidentScalingRatio=IncidentScalingRatio_new
+                #    print "Incident radiation ratio:  " + str(IncidentScalingRatio)
                 if CoulpedSim==True:
-                    IncidentScalingRatio_new=IncidentScalingRatio+(IncidentScalingRatio_old-IncidentScalingRatio)/(PEold-PEcurrent)*(PEinit-PEcurrent)
-                    IncidentScalingRatio_old=IncidentScalingRatio
-                    IncidentScalingRatio=IncidentScalingRatio_new
-                    print "Incident radiation ratio:  " + str(IncidentScalingRatio)
+                    FuelScalingRatio_new=FuelScalingRatio+(FuelScalingRatio_old-FuelScalingRatio)/(PEold-PEcurrent)*(PEinit-PEcurrent)
+                    FuelScalingRatio_old=FuelScalingRatio
+                    FuelScalingRatio=FuelScalingRatio_new
+                    print "Fuel flow rate scaling ratio:  " + str(FuelScalingRatio)
                 # uncoupled simulation
                 else:
                     heatFluxRatio_new=heatFluxRatio+(heatFluxRatio_old-heatFluxRatio)/(PEold-PEcurrent)*(PEinit-PEcurrent)
