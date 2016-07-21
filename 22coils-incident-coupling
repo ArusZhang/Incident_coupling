@@ -950,12 +950,12 @@ if not os.path.exists(workdir): print('Working directory does not exist!')
 
 # template directory where the raw files needed for the simulation are stored
 global templatedir
-templatedir=os.path.join(datdir,'timestep0_PEloop0_iteration5') #----------------------------------------change this
+templatedir=os.path.join(datdir,'v3.1 template propane') #----------------------------------------change this
 print templatedir
 if not os.path.exists(templatedir): print('Template directory does not exist!')
 
 # heat flux source
-HeatFluxProfileTemplate='HuajinUSC_heatflux_Propane_incident_timestep0_PEloop0_it5.xls' #----------------------------------------change this
+HeatFluxProfileTemplate='HuajinUSC_heatflux_propane_coke_it4.xls' #----------------------------------------change this
 #--------------------------Set paths for whole routine--------------------------#
 
 
@@ -979,7 +979,7 @@ heatFluxRatio=1
 IncidentScalingRatio=1
 
 # furnace section
-FuelScalingRatio=0.95
+FuelScalingRatio=1
 
 # temperature of flue gas
 global Q_absorb
@@ -1001,7 +1001,7 @@ Basic_fluegas_flow=725.821542
 
 # ------ values may need to change ------ #
 # flow type
-caseType='Propane'    # Options: 'original','coke','COT','PE'
+caseType='coke'    # Options: 'original','coke','COT','PE'
 
 # !!!!!!!!!!!!!!! correction for v3.1 - this is because the coking rate calculation in version 3.1 is not correct!!!!!!!!!!!!!!!!!!
 ResultsFilenameV31='Reactor_Results_template.xls'   # name of the result.xls in the template folder
@@ -1013,8 +1013,8 @@ CouplingCorrections=False
 startTimestep=0                               #----------------------------------------change this
 
 # simulation type
-RunLengthSim=True     # 'True' perform run length simulation; 'False' no run length simulation will be performed;
-OneTimeSimulation=False  # 'True' when the simulation is performed only once with heat flux from external source
+RunLengthSim=False     # 'True' perform run length simulation; 'False' no run length simulation will be performed;
+OneTimeSimulation=True  # 'True' when the simulation is performed only once with heat flux from external source
 
 # parameters only for run length simulation
 CoulpedSim=True       # 'True' coupled run length simulation; 'False' standalone run length simulation;
@@ -1027,7 +1027,7 @@ CIPmaximum=5.46         # end-of-run criteria CIP
 
 # assign values for different flow types
 if caseType=='Propane':
-    flowrate=[312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636,312.636] #Propane
+    flowrate=[329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090] #Propane
 if caseType=='original':
     flowrate=[329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090] #ORIGINAL
 if caseType=='original10+':
