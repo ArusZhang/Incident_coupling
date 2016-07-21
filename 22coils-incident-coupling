@@ -391,9 +391,9 @@ def simulateReactors():
         f.close()
         #Change directory and run COILSIM
         if (COILSIM_version=='v2' or COILSIM_version=='v3.1'):
-            subprocess.call(['C:\Users\yuzhan\AppData\Roaming\coilsim3d\Coilsim.exe'])
+            subprocess.call(['C:\Users\yuzhan\AppData\Roaming\coilsim2d\Coilsim.exe'])
         elif (COILSIM_version=='v3.2' or COILSIM_version=='v3.7'):
-            subprocess.call(['C:\ProgramData\coilsim3d\Coilsim.exe'])
+            subprocess.call(['C:\ProgramData\coilsim2d\Coilsim.exe'])
 
         
         #Read COP and compare with COP setpoint to get new CIP
@@ -928,7 +928,7 @@ COILSIM_version='v3.1'
 
 # data directory
 global datdir
-datdir='C:\\work\\5 USCfurnace Simulation\\run'
+datdir='C:\\work\\5 USCfurnace Simulation\\run2'
 if not os.path.exists(datdir): print('Folder of input does not exist!')
 
 # result directory "data directory+Results"
@@ -939,9 +939,9 @@ if not os.path.exists(results_dir): print('Folder of results does not exist!')
 # working directory where COILSIM.exe is located
 global workdir
 if (COILSIM_version=='v2' or COILSIM_version=='v3.1'):
-    workdir='C:\\Users\\yuzhan\\AppData\\Roaming\\coilsim3d'
+    workdir='C:\\Users\\yuzhan\\AppData\\Roaming\\coilsim2d'
 elif (COILSIM_version=='v3.2' or COILSIM_version=='v3.7'):
-    workdir='C:\\ProgramData\\coilsim3d'
+    workdir='C:\\ProgramData\\coilsim2d'
 else:
     print "COILSIM version:  "+COILSIM_version+" does not exist"
     sys.exit()
@@ -950,12 +950,12 @@ if not os.path.exists(workdir): print('Working directory does not exist!')
 
 # template directory where the raw files needed for the simulation are stored
 global templatedir
-templatedir=os.path.join(datdir,'v3.1 template propane') #----------------------------------------change this
+templatedir=os.path.join(datdir,'timestep0_PEloop0_iteration5') #----------------------------------------change this
 print templatedir
 if not os.path.exists(templatedir): print('Template directory does not exist!')
 
 # heat flux source
-HeatFluxProfileTemplate='HuajinUSC_heatflux_Propane_template.xls' #----------------------------------------change this
+HeatFluxProfileTemplate='HuajinUSC_heatflux_Propane_incident_timestep0_PEloop0_it5.xls' #----------------------------------------change this
 #--------------------------Set paths for whole routine--------------------------#
 
 
@@ -1018,7 +1018,7 @@ OneTimeSimulation=False  # 'True' when the simulation is performed only once wit
 
 # parameters only for run length simulation
 CoulpedSim=True       # 'True' coupled run length simulation; 'False' standalone run length simulation;
-timestepinterval=50  # the interval of timestep [h]
+timestepinterval=200  # the interval of timestep [h]
 Maxstep=50               # maximum run length step
 cora=0.50               # coking rate scaling factor
 TMTmax=1125             # end-of-run criteria TMT
