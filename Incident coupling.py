@@ -131,7 +131,7 @@ def WriteCokeFile():
         FileCoke = open(WorkDir+'\\Projects\\USC\\Huajin'+str(i)+'\\coke.i','w')
         CokePre = '500    0.1\n'+str(Interpo)+'\n'
         FileCoke.write(CokePre+cokethickness_content[i])
-        FileCoke.close
+        FileCoke.close()
 
 
 
@@ -174,7 +174,7 @@ def SimulateReactors():
                 if COP[i]<1.2:
                     x1[i]=x1[i]+1
         
-        # update exp.txt and start furnace simulation
+        # update exp.txt and start reactor simulation
         for i in range(0,N_reactor):
             # write the exp.txt file
             FileExp = open(WorkDir+'\\Projects\\USC\\Huajin'+str(i)+'\\exp.txt','w')
@@ -185,7 +185,7 @@ def SimulateReactors():
             else:
                 ExpNex += str(x1[i])+'\n'
             FileExp.write(ExpPre+heatflux_content[i]+'\n'+flowrate_content[i]+'\n'+ExpNex)
-            FileExp.close
+            FileExp.close()
         
         # change directory and run COILSIM1D
         os.chdir(WorkDir)
@@ -215,6 +215,7 @@ def SimulateReactors():
     # output the CIP values
     OutputPE='            CIP of all reactors: '
     for i in range(0,N_reactor):
+        CIP[i]=x1[i]
         OutputPE += str(CIP[i]) + ' '
     print OutputPE
 
@@ -351,7 +352,7 @@ def WriteResults():
     else:
         Path = ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_PEloop'+str(IterationPE)
     if  os.path.exists(Path): shutil.rmtree(Path)
-    time.sleep(2.0)
+    time.sleep(4.0)
     # copy files to the results folder
     shutil.copytree(WorkDir+'\\Projects\\USC',Path)
     # remove the summary excel file
@@ -718,7 +719,7 @@ f_simu.close()
 
 # copy the files in the template dir to the work dir
 if os.path.exists(WorkDir+'\\Projects\\USC'): shutil.rmtree(WorkDir+'\\Projects\\USC')
-time.sleep(2.0)
+time.sleep(4.0)
 shutil.copytree(TempDir,WorkDir+'\\Projects\USC')
 # remove the summary excel file
 os.remove(WorkDir+'\\Projects\\USC\\'+FileReactor)
