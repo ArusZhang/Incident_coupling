@@ -140,84 +140,118 @@ def WriteCokeFile():
 def SimulateReactors():
     FlagConvArray=zeros(N_reactor)
     FlagConv=0
-    # x0 and x1 are CIP values in previous two iterations, xnew is the new CIP
-    x0=zeros(N_reactor)
-    x1=zeros(N_reactor)
-    xnew=zeros(N_reactor)
-    # f0 and f1 are the difference between COP and COPset in previous two iterations
-    f0=zeros(N_reactor)
-    f1=[1.0]*N_reactor
+    # CIP values
+    x_low=zeros(N_reactor)
+    x_high=zeros(N_reactor)
+    x_old=zeros(N_reactor)
+    x_new=zeros(N_reactor)
+    # COP values
+    y_old=zeros(N_reactor)
+    # counter
+    CounterCIP=zeros(N_reactor)
     # start iteration
     iteration=0
     while ((iteration<MaxCIPIteration) and (FlagConv==0)):
         iteration+=1
+        # write simulation.txt
+        f_simu = open(WorkDir+'\\Projects\\simulation.txt', 'w')
+        simu_content = str(N_reactor-int(np.sum(FlagConvArray)))+'\n'+'0\n'
         for i in range(0,N_reactor):
-            if iteration==1:
-                x0[i]=CIP[i]
-            elif iteration==2 :
-                x1[i]=1.01*CIP[i]
-            elif FlagConvArray[i]==0:
-                if (abs(f1[i]-f0[i])>1e-6):
-                    if (abs(x1[i]-x0[i])>1e-6):   #if the difference in inlet pressure is too small
-                        xnew[i]=x1[i]-f1[i]/((f1[i]-f0[i])/(x1[i]-x0[i]))
-                    else:
-                        xnew[i]=1.01*x1[i]
-                else:
-                    xnew[i]=1.01*x1[i]
-                if xnew[i]<COPset:
-                    x0[i]=x1[i]
-                    x1[i]=x1[i]+0.2
-                else:
-                    x0[i]=x1[i]
-                    x1[i]=xnew[i]
-                # CIP was too low and the COP was forced to be 1.2 in previous simulation
-                if COP[i]<1.2:
-                    x1[i]=x1[i]+1
-        
+            if FlagConvArray[i]==0:
+                simu_content += 'USC\Huajin'+str(i)+'\n'
+        f_simu.write(simu_content)
+        f_simu.close()
         # update exp.txt and start reactor simulation
         for i in range(0,N_reactor):
-            # write the exp.txt file
-            FileExp = open(WorkDir+'\\Projects\\USC\\Huajin'+str(i)+'\\exp.txt','w')
-            ExpPre = '1 \n1 \n'
-            ExpNex = str(DilutionSteam)+'\n'+str(CIT)+' '
-            if iteration==1:
-                ExpNex += str(x0[i])+'\n'
-            else:
-                ExpNex += str(x1[i])+'\n'
-            FileExp.write(ExpPre+heatflux_content[i]+'\n'+flowrate_content[i]+'\n'+ExpNex)
-            FileExp.close()
-        
+            if FlagConvArray[i]==0:
+                CounterCIP[i]+=1
+                # write the exp.txt file
+                FileExp = open(WorkDir+'\\Projects\\USC\\Huajin'+str(i)+'\\exp.txt','w')
+                ExpPre = '1 \n1 \n'
+                ExpNex = str(DilutionSteam)+'\n'+str(CIT)+' '
+                ExpNex += str(CIP[i])+'\n'
+                FileExp.write(ExpPre+heatflux_content[i]+'\n'+flowrate_content[i]+'\n'+ExpNex)
+                FileExp.close()
         # change directory and run COILSIM1D
         os.chdir(WorkDir)
         subprocess.call(['Coilsim.exe'])
         os.chdir(os.path.pardir)
-        
         # read COP and compare with COP setpoint to get new CIP
         for i in range(0,N_reactor):
             FileCSV = open(WorkDir+'\\Projects\\USC\\Huajin'+str(i)+'\\general_info.csv','rb')
             data = list(csv.reader(FileCSV,delimiter=','))
             COP[i]=float(data[N_reactor_axial][7].strip())
-            if iteration==1:
-                f0[i]=COP[i]-COPset
-            elif iteration==2:
-                f1[i]=COP[i]-COPset
-            else:
-                if (abs(COP[i]-COPset))<CIPTreshold:
-                    FlagConvArray[i]=1
-                else:
-                    f0[i]=f1[i]
-                    f1[i]=COP[i]-COPset
+            if (abs(COP[i]-COPset))<CIPTreshold:
+                FlagConvArray[i]=1
             FileCSV.close()
+        '''# output the COP values
+        OutputPE='            COP of all reactors: '
+        for i in range(0,N_reactor):
+            OutputPE += str(COP[i]) + ' '
+        print OutputPE'''
+        # update new CIP
+        for i in range(0,N_reactor):
+            if FlagConvArray[i]==0:
+                # for COP smaller than 1.2
+                if COP[i]<1.12:
+                    x_low[i]=CIP[i]
+                    CIP[i]=CIP[i]+1
+                    CounterCIP[i]=0
+                else:
+                    # at least two iterations are needed
+                    if CounterCIP[i]==1:
+                        if COP[i]<COPset:
+                            x_low[i]=CIP[i]
+                            x_old[i]=CIP[i]
+                            y_old[i]=COP[i]
+                            CIP[i]=CIP[i]*1.01
+                        else:
+                            x_high[i]=CIP[i]
+                            x_old[i]=CIP[i]
+                            y_old[i]=COP[i]
+                            CIP[i]=CIP[i]*0.99
+                    else:
+                        # set upper or lower limits for CIP
+                        if COP[i]<COPset:
+                            x_low[i]=CIP[i]
+                        else:
+                            x_high[i]=CIP[i]
+                        # calculate new CIP based on the COP
+                        if x_old[i]==CIP[i]:
+                            x_new[i]=CIP[i]+(x_old[i]-CIP[i])/0.0001*(COPset-COP[i])
+                        else:
+                            x_new[i]=CIP[i]+(x_old[i]-CIP[i])/(y_old[i]-COP[i])*(COPset-COP[i])
+                        x_old[i]=CIP[i]
+                        y_old[i]=COP[i]
+                        # 
+                        if (x_low[i]!=0 and x_high[i]!=0):
+                            # in the case of new CIP exceeds the lower limit
+                            if x_new[i]<x_low[i]:
+                                # avoid repeating of CIP in two iterations when the calculated x_new is always smaller than the lower limit
+                                if CIP[i]==x_low[i]*1.01:
+                                    CIP[i]=(x_low[i]+x_high[i])/2.0
+                                else:
+                                    CIP[i]=x_low[i]*1.01
+                            # in the case of new CIP exceeds the upper limit
+                            elif x_new[i]>x_high[i]:
+                                # avoid repeating of CIP in two iterations when the calculated x_new is always larger than the upper limit
+                                if CIP[i]==x_high[i]*0.99:
+                                    CIP[i]=(x_low[i]+x_high[i])/2.0
+                                else:
+                                    CIP[i]=x_high[i]*0.99
+                            else:
+                                CIP[i]=x_new[i]
+                        else:
+                            CIP[i]=x_new[i]
+        # iteraion is completed
         if (np.sum(FlagConvArray)==N_reactor):
             FlagConv=1
         print '            CIP iteration: '+ str(iteration)
-    
-    # output the CIP values
-    OutputPE='            CIP of all reactors: '
-    for i in range(0,N_reactor):
-        CIP[i]=x1[i]
-        OutputPE += str(CIP[i]) + ' '
-    print OutputPE
+        # output the CIP values
+        OutputPE='            CIP of all reactors: '
+        for i in range(0,N_reactor):
+            OutputPE += str(CIP[i]) + ' '
+        print OutputPE
 
 
 
@@ -598,42 +632,43 @@ FileIncidentR=variable[17]       # name of the incident radiative heat flux temp
 T_fluegas_base=float(variable[21])  # flue gas birdge wall temperature (T_fluegas) in base case (K)
 Q_release_base=float(variable[22])  # total heat release (Q_release) in base case (kW)
 F_fluegas_base=float(variable[23])  # flue gas flow rate (F_fluegas) in base case (kmol/h)
+FuelScalingRatio=float(variable[24])# fuel gas flow rate scaling factor
 
 # run length simulation #
-StartTimeStep=int(variable[27])     # initial time step (h)
-TimeInterval=int(variable[28])      # time step interval of (h)
-MaxTimeStep=int(variable[29])       # maximum run length time step
-MaxTMTset=float(variable[30])       # end-of-run criteria TMT (C)
-MaxCIPset=float(variable[31])       # end-of-run criteria CIP (atm)
-CokeCorrelation=float(variable[32]) # coking rate scaling factor
+StartTimeStep=int(variable[28])     # initial time step (h)
+TimeInterval=int(variable[29])      # time step interval of (h)
+MaxTimeStep=int(variable[30])       # maximum run length time step
+MaxTMTset=float(variable[31])       # end-of-run criteria TMT (C)
+MaxCIPset=float(variable[32])       # end-of-run criteria CIP (atm)
+CokeCorrelation=float(variable[33]) # coking rate scaling factor
 
 # boundary condition #
-DilutionSteam=float(variable[36])       # dilution steam
-CIT=float(variable[37])                 # CIT (C)
-COPset=float(variable[38])              # COP set value (atm)
-MixingCupPEtarget=float(variable[39])   # mixing-up P/E set value (only for P/E shooting simulation)
+DilutionSteam=float(variable[37])       # dilution steam
+CIT=float(variable[38])                 # CIT (C)
+COPset=float(variable[39])              # COP set value (atm)
+MixingCupPEtarget=float(variable[40])   # mixing-up P/E set value (only for P/E shooting simulation)
 
 # convergence #
-TMTRelaxFactor=float(variable[43])      # TMT relaxation factor
-IncidentRelaxFactor=float(variable[44]) # incident scaling relaxation factor
-MaxPEIteration=int(variable[45])        # Maximum P/E iteration
-MaxTMTIteration=int(variable[46])       # Maximum TMT iteration
-MaxCIPIteration=int(variable[47])       # Maximum CIP iteration
-PETreshold=float(variable[48])          # P/E convergence treshold
-TMTTreshold=float(variable[49])         # TMT convergence treshold
-CIPTreshold=float(variable[50])         # CIP convergence treshold
-BalanceTreshold=float(variable[51])     # furnace heat balance treshold
+TMTRelaxFactor=float(variable[44])      # TMT relaxation factor
+IncidentRelaxFactor=float(variable[45]) # incident scaling relaxation factor
+MaxPEIteration=int(variable[46])        # Maximum P/E iteration
+MaxTMTIteration=int(variable[47])       # Maximum TMT iteration
+MaxCIPIteration=int(variable[48])       # Maximum CIP iteration
+PETreshold=float(variable[49])          # P/E convergence treshold
+TMTTreshold=float(variable[50])         # TMT convergence treshold
+CIPTreshold=float(variable[51])         # CIP convergence treshold
+BalanceTreshold=float(variable[52])     # furnace heat balance treshold
 
 # geometry info #
-N_reactor=int(variable[55])          # number of the reactor coil
-N_reactor_axial=int(variable[56])    # number of reactor axial points in COILSIM1D (two passes)
-N_furnace_points=int(variable[57])   # number of reactor axial points in furnace (one pass)
+N_reactor=int(variable[56])          # number of the reactor coil
+N_reactor_axial=int(variable[57])    # number of reactor axial points in COILSIM1D (two passes)
+N_furnace_points=int(variable[58])   # number of reactor axial points in furnace (one pass)
 
 # feedstock mass flow rate (kg/h)
-variable[61]=variable[61].split(',')
+variable[62]=variable[62].split(',')
 FlowRate = zeros(N_reactor)
 for i in range(0,N_reactor):
-    FlowRate[i]=variable[61][i]
+    FlowRate[i]=variable[62][i]
 Input_file.close()
 
 # other constants
@@ -651,7 +686,6 @@ CokeDensity=1600                # coke density (kg/m^3)
 # value initialization #
 T_fluegas=T_fluegas_base
 Q_absorb=1.0
-FuelScalingRatio=1.0
 IncidentScalingRatio=1.0
 HeatFluxScalingRatio=1.0
 MaxTMT=0.0
@@ -708,6 +742,7 @@ HeatFlux_ini = array(HeatFlux)
 
 
 #------------------------------ Initialization ------------------------------#
+'''
 # write simulation.txt
 f_simu = open(WorkDir+'\\Projects\\simulation.txt', 'w')
 simu_content = str(N_reactor)+'\n'+'0\n'
@@ -715,6 +750,7 @@ for i in range(0,N_reactor):
     simu_content += 'USC\Huajin'+str(i)+'\n'
 f_simu.write(simu_content)
 f_simu.close()
+'''
 
 
 # copy the files in the template dir to the work dir
@@ -914,6 +950,7 @@ if CoupledSim==1:
             TMTLoopConv=False
             IterationTMT=1
             while TMTLoopConv==False:
+                print '        TMT iteration: ' + str(IterationTMT)
                 # perform reactor simulations (TMT loop) and generate wall temperature coefficient
                 SimulateReactors()
                 FurnaceEstimation()
