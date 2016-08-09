@@ -1,0 +1,64 @@
+# dir #
+COILSIM-CRAFT-3.8\runprograms	    ! workdir
+SEI_outcome	        ! resultsdir
+
+
+# simulation option #
+v3.8        ! coilsim version
+test        ! case name
+1	        ! perform coupled simulation, 1.yes, 0.no
+1	        ! perform runLength simulation, 1.yes, 0.no
+0	        ! perform P/E shooting simulation, 1.yes, 0.no
+
+
+# templates #
+SEI_template              ! template folder
+Reactor_Results_template.xls	    ! name of the reactor result template file in the folder
+SEI_heatflux_test_template.xls	    ! name of the heat flux template file
+input.xlsx	        ! name of the incident radiative heat flux template file
+
+
+# base case condition #
+1323.1403	    ! flue gas birdge wall temperature (T_fluegas) in base case (K)
+13814.904         ! total heat release (Q_release) in base case (kW)
+709.6440887	    ! flue gas flow rate (F_fluegas) in base case (kmol/h)
+0.974730348       ! fuel gas flow rate scaling factor
+
+
+# run length simulation #
+0	    ! initial time step (h)
+200	    ! time step interval of (h)
+50	    ! maximum run length time step
+1110	! end-of-run criteria TMT (C)
+5.46	! end-of-run criteria CIP (atm)
+1.00	! coking rate scaling factor
+
+
+# boundary condition #
+0.46	    ! dilution steam
+587	        ! CIT (C)
+1.85	    ! COP set value (atm)
+0.4	        ! mixing-up P/E set value (only for P/E shooting simulation)
+
+
+# convergence #
+0.3	        ! TMT relaxation factor
+0.1	        ! incident scaling relaxation factor
+20          ! Maximum P/E iteration
+50	        ! Maximum TMT iteration
+20	        ! Maximum CIP iteration
+0.005	    ! P/E convergence treshold 
+8	        ! TMT convergence treshold
+0.005	    ! CIP convergence treshold
+0.1	        ! furnace heat balance treshold
+
+
+# geometry info #
+1          ! number of the reactor coil
+47          ! number of reactor axial points in COILSIM1D (two passes)
+50          ! number of reactor axial points in furnace (one pass)
+
+
+# feedstock mass flow rate (kg/h) #
+345.000
+
