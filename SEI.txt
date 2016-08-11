@@ -22,13 +22,13 @@ input.xlsx	        ! name of the incident radiative heat flux template file
 1323.1403	    ! flue gas birdge wall temperature (T_fluegas) in base case (K)
 13814.904         ! total heat release (Q_release) in base case (kW)
 709.6440887	    ! flue gas flow rate (F_fluegas) in base case (kmol/h)
-0.974730348       ! fuel gas flow rate scaling factor
+1.048304112       ! fuel gas flow rate scaling factor
 
 
 # run length simulation #
 0	    ! initial time step (h)
-200	    ! time step interval of (h)
-50	    ! maximum run length time step
+24	    ! time step interval (h)
+100	    ! maximum run length time step
 1110	! end-of-run criteria TMT (C)
 5.46	! end-of-run criteria CIP (atm)
 1.00	! coking rate scaling factor
@@ -38,7 +38,7 @@ input.xlsx	        ! name of the incident radiative heat flux template file
 0.46	    ! dilution steam
 587	        ! CIT (C)
 1.85	    ! COP set value (atm)
-0.4	        ! mixing-up P/E set value (only for P/E shooting simulation)
+0.45	        ! mixing-up P/E set value (only for P/E shooting simulation)
 
 
 # convergence #
