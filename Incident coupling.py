@@ -152,7 +152,14 @@ def SimulateReactors():
     # start iteration
     iteration=0
     while ((iteration<MaxCIPIteration) and (FlagConv==0)):
+        # update iteration step
         iteration+=1
+        print '            CIP iteration: '+ str(iteration)
+        # output the CIP values
+        OutputPE='            CIP of all reactors: '
+        for i in range(0,N_reactor):
+            OutputPE += str(CIP[i]) + ' '
+        print OutputPE
         # write simulation.txt
         f_simu = open(WorkDir+'\\Projects\\simulation.txt', 'w')
         simu_content = str(N_reactor-int(np.sum(FlagConvArray)))+'\n'+'0\n'
@@ -192,8 +199,8 @@ def SimulateReactors():
         # update new CIP
         for i in range(0,N_reactor):
             if FlagConvArray[i]==0:
-                # for COP smaller than 1.2
-                if COP[i]<1.12:
+                # for COP smaller than 1.125
+                if COP[i]<1.125:
                     x_low[i]=CIP[i]
                     CIP[i]=CIP[i]+1
                     CounterCIP[i]=0
@@ -203,13 +210,11 @@ def SimulateReactors():
                         if COP[i]<COPset:
                             x_low[i]=CIP[i]
                             x_old[i]=CIP[i]
-                            y_old[i]=COP[i]
-                            CIP[i]=CIP[i]*1.01
+                            CIP[i]=CIP[i]*1.005
                         else:
                             x_high[i]=CIP[i]
                             x_old[i]=CIP[i]
-                            y_old[i]=COP[i]
-                            CIP[i]=CIP[i]*0.99
+                            CIP[i]=CIP[i]*0.995
                     else:
                         # set upper or lower limits for CIP
                         if COP[i]<COPset:
@@ -217,41 +222,32 @@ def SimulateReactors():
                         else:
                             x_high[i]=CIP[i]
                         # calculate new CIP based on the COP
-                        if x_old[i]==CIP[i]:
+                        if y_old[i]==COP[i]:
                             x_new[i]=CIP[i]+(x_old[i]-CIP[i])/0.0001*(COPset-COP[i])
                         else:
                             x_new[i]=CIP[i]+(x_old[i]-CIP[i])/(y_old[i]-COP[i])*(COPset-COP[i])
                         x_old[i]=CIP[i]
-                        y_old[i]=COP[i]
-                        # 
+                        # CIP cannot exceed the range of the two limits
                         if (x_low[i]!=0 and x_high[i]!=0):
-                            # in the case of new CIP exceeds the lower limit
-                            if x_new[i]<x_low[i]:
-                                # avoid repeating of CIP in two iterations when the calculated x_new is always smaller than the lower limit
-                                if CIP[i]==x_low[i]*1.01:
-                                    CIP[i]=(x_low[i]+x_high[i])/2.0
-                                else:
-                                    CIP[i]=x_low[i]*1.01
-                            # in the case of new CIP exceeds the upper limit
-                            elif x_new[i]>x_high[i]:
-                                # avoid repeating of CIP in two iterations when the calculated x_new is always larger than the upper limit
-                                if CIP[i]==x_high[i]*0.99:
-                                    CIP[i]=(x_low[i]+x_high[i])/2.0
-                                else:
-                                    CIP[i]=x_high[i]*0.99
+                            if x_new[i]<x_low[i] or x_new[i]>x_high[i]:
+                                CIP[i]=(x_low[i]+x_high[i])/2.0
                             else:
                                 CIP[i]=x_new[i]
+                        # CIP change between two iterations cannot be too large
+                        elif x_new[i]<x_old[i]-1:
+                            CIP[i]=x_old[i]*0.95
+                        elif x_new[i]>x_old[i]+1:
+                            CIP[i]=x_old[i]*1.05
+                        # normal
                         else:
                             CIP[i]=x_new[i]
+                # store current COP value for the next iteration
+                y_old[i]=COP[i]
+        if iteration==MaxCIPIteration:
+            print '!! warning: CIP loop reaches maximum iteration times !!'
         # iteraion is completed
         if (np.sum(FlagConvArray)==N_reactor):
             FlagConv=1
-        print '            CIP iteration: '+ str(iteration)
-        # output the CIP values
-        OutputPE='            CIP of all reactors: '
-        for i in range(0,N_reactor):
-            OutputPE += str(CIP[i]) + ' '
-        print OutputPE
 
 
 
@@ -418,9 +414,9 @@ def GenerateWalltempCoefficient():
         elif Coilsim_Axial[i] <= 10.26717:
             Furnace_Position[i] = 11.67617 - Coilsim_Axial[i]
         elif Coilsim_Axial[i] <= AxialDivPointLeg:
-            Furnace_Position[i] = 1.409 - 0.74*(math.sin((Coilsim_Axial[i]-10.26717)/0.74))
+            Furnace_Position[i] = 1.409 - 0.74*(math.sin(Coilsim_Axial[i]-10.26717))
         elif Coilsim_Axial[i] <= 12.59195:
-            Furnace_Position[i] = 0.74 - 0.74*math.cos((Coilsim_Axial[i]-11.42956)/0.74) + 0.669
+            Furnace_Position[i] = 0.74 - 0.74*math.cos(Coilsim_Axial[i]-11.42956) + 0.669
         else:
             Furnace_Position[i] = Coilsim_Axial[i] - 12.59195 + 1.409
     # TMT values in Kelvin
@@ -636,7 +632,7 @@ FuelScalingRatio=float(variable[24])# fuel gas flow rate scaling factor
 
 # run length simulation #
 StartTimeStep=int(variable[28])     # initial time step (h)
-TimeInterval=int(variable[29])      # time step interval of (h)
+TimeInterval=int(variable[29])      # time step interval (h)
 MaxTimeStep=int(variable[30])       # maximum run length time step
 MaxTMTset=float(variable[31])       # end-of-run criteria TMT (C)
 MaxCIPset=float(variable[32])       # end-of-run criteria CIP (atm)
@@ -726,8 +722,6 @@ if RunLengthSim==1:
     elif MaxCIP>MaxCIPset:
         print 'Program terminated:  initial CIP maximum: ' + str(MaxCIP) + ' atm already exceeds the stopping criteria: ' + str(MaxCIPset) + ' atm'
         exit()
-    # assgin first time step
-    TimeStep=StartTimeStep+TimeInterval
 
 
 # read heat flux profiles (W/m^2) and convert it to (kcal/m2)
@@ -829,8 +823,14 @@ else:
 if CoupledSim==0:
     # -------------------------------- start time step loop
     TimeStepLoopFin=False
-    IterationTimeStep=1
+    IterationTimeStep=0
     while TimeStepLoopFin==False:
+        # advance in one more time step
+        IterationTimeStep+=1
+        if ExecTimeStepLoop==True:
+            TimeStep=StartTimeStep+TimeInterval*IterationTimeStep
+        else:
+            TimeStep=StartTimeStep
         # print the simulation status
         if ExecTimeStepLoop==True:
             print ' -------- TMT criterion: ' + str(MaxTMTset) + ' -------- '
@@ -843,8 +843,12 @@ if CoupledSim==0:
         
         # ---------------- start P/E loop
         PELoopConv=False
-        IterationPE=1
+        IterationPE=0
+        Heat_low=0
+        Heat_high=0
         while PELoopConv==False:
+            # update iteration step
+            IterationPE+=1
             # print the simulation status
             if ExecPEloop==True:
                 print ' ---- Mixing-cup P/E target: ' + str(MixingCupPEtarget) + ' ---- '
@@ -866,20 +870,42 @@ if CoupledSim==0:
             # adjust the heat flux scaling ratio according to the mixing-cup P/E
             if PELoopConv==False:
                 PE_now=MixingCupPE
+                # at least two iterations are needed
                 if IterationPE==1:
-                    HeatFluxScalingRatio_old=HeatFluxScalingRatio
-                    HeatFluxScalingRatio+=0.01
+                    if PE_now>MixingCupPEtarget:
+                        Heat_low=HeatFluxScalingRatio
+                        HeatFluxScalingRatio_old=HeatFluxScalingRatio
+                        HeatFluxScalingRatio+=0.01
+                    else:
+                        Heat_high=HeatFluxScalingRatio
+                        HeatFluxScalingRatio_old=HeatFluxScalingRatio
+                        HeatFluxScalingRatio-=0.01
                 else:
-                    HeatFluxScalingRatio_new=HeatFluxScalingRatio+(HeatFluxScalingRatio_old-HeatFluxScalingRatio)/(PE_old-PE_now)*(MixingCupPEtarget-PE_now)
+                    # set upper and lower limits for heat flux scaling ratio
+                    if PE_now>MixingCupPEtarget:
+                        Heat_low=HeatFluxScalingRatio
+                    else:
+                        Heat_high=HeatFluxScalingRatio
+                    # calculate new heat flux scaling ratio
+                    if PE_old==PE_now:
+                        HeatFluxScalingRatio_new=HeatFluxScalingRatio+(HeatFluxScalingRatio_old-HeatFluxScalingRatio)/0.0001*(MixingCupPEtarget-PE_now)
+                    else:
+                        HeatFluxScalingRatio_new=HeatFluxScalingRatio+(HeatFluxScalingRatio_old-HeatFluxScalingRatio)/(PE_old-PE_now)*(MixingCupPEtarget-PE_now)
                     HeatFluxScalingRatio_old=HeatFluxScalingRatio
-                    HeatFluxScalingRatio=HeatFluxScalingRatio_new
+                    # heat flux scaling ratio cannot exceed the range of the two limits
+                    if (Heat_low!=0 and Heat_high!=0):
+                        if HeatFluxScalingRatio_new<Heat_low or HeatFluxScalingRatio_new>Heat_high:
+                            HeatFluxScalingRatio=(Heat_low+Heat_high)/2.0
+                        else:
+                            HeatFluxScalingRatio=HeatFluxScalingRatio_new
+                    else:
+                        HeatFluxScalingRatio=HeatFluxScalingRatio_new
                 # assign new heat flux profile
                 HeatFlux=array(HeatFlux_ini)*HeatFluxScalingRatio
                 '''HeatFlux = [ [ j*HeatFluxScalingRatio for j in i ] for i in HeatFlux ]'''
                 PrepareContent('HeatFlux')
-                # update P/E and interation step
+                # store current P/E value for the next iteration
                 PE_old=PE_now
-                IterationPE+=1
                 print '    Mixing-cup P/E: '+ str(MixingCupPE)
             # print the P/E results
             else:
@@ -904,12 +930,8 @@ if CoupledSim==0:
         if PEOnly==True:
             TimeStepLoopFin=True
             print '#### Standalone P/E shooting simulation of case: (' + CaseName + ') is completed ####'
-        # advance in one more time step
-        if TimeStepLoopFin==False:
-            TimeStep+=TimeInterval
-            IterationTimeStep+=1
         # print the run length results
-        else:
+        if TimeStepLoopFin==True:
             if ExecTimeStepLoop==True:
                 if Flag==1:
                     print '#### Standalone run length simulation of case: (' + CaseName + ') is completed due to TMT maximum ####'
@@ -925,8 +947,14 @@ if CoupledSim==0:
 if CoupledSim==1:
     # -------------------------------- start time step loop
     TimeStepLoopFin=False
-    IterationTimeStep=1
+    IterationTimeStep=0
     while TimeStepLoopFin==False:
+        # advance in one more time step
+        IterationTimeStep+=1
+        if ExecTimeStepLoop==True:
+            TimeStep=StartTimeStep+TimeInterval*IterationTimeStep
+        else:
+            TimeStep=StartTimeStep
         # print the simulation status
         if ExecTimeStepLoop==True:
             print ' -------- TMT criterion: ' + str(MaxTMTset) + ' -------- '
@@ -939,8 +967,12 @@ if CoupledSim==1:
         
         # ---------------- start P/E loop
         PELoopConv=False
-        IterationPE=1
+        IterationPE=0
+        Fuel_low=0
+        Fuel_high=0
         while PELoopConv==False:
+            # update iteration step
+            IterationPE+=1
             # print the simulation status
             if ExecPEloop==True:
                 print ' ---- Mixing-cup P/E target: ' + str(MixingCupPEtarget) + ' ---- '
@@ -948,8 +980,10 @@ if CoupledSim==1:
             
             # -------- start TMT loop
             TMTLoopConv=False
-            IterationTMT=1
+            IterationTMT=0
             while TMTLoopConv==False:
+                # update iteration step
+                IterationTMT+=1
                 print '        TMT iteration: ' + str(IterationTMT)
                 # perform reactor simulations (TMT loop) and generate wall temperature coefficient
                 SimulateReactors()
@@ -975,8 +1009,10 @@ if CoupledSim==1:
                     
                     # ---- start furnace estimation loop
                     FurnaceHeatBalance=False
-                    IterationFurnace=1
+                    IterationFurnace=0
                     while FurnaceHeatBalance==False:
+                        # update iteration step
+                        IterationFurnace+=1
                         # start furnace estimation
                         FurnaceEstimation()
                         # at least two iterations are required to update the new flue gas birdge wall temperature
@@ -994,14 +1030,13 @@ if CoupledSim==1:
                             # update furnace heat flux profile, flue gas bridge wall temperature and iteration step
                             GenerateHeatflux()
                             T_fluegas_old=T_fluegas
-                            IterationFurnace+=1
                     # ---- end furnace estimation loop
                     
-                    # update reactor heat flux profile and iteration step
+                    # update reactor heat flux profile
                     GetHeatFlux()
                     PrepareContent('HeatFlux')
+                    # store current TMT value for the next iteration
                     TMT_old=array(TMT)
-                    IterationTMT+=1
                 #
                 else:
                     print '        TMT loop is converged (Flue gas bridge wall temperature (K): '+ str(T_fluegas) + ', incident radiative heat flux scaling ratio: ' + str(IncidentScalingRatio) + ')'
@@ -1013,7 +1048,7 @@ if CoupledSim==1:
             if IterationPE==MaxPEIteration:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
-            # standalone steady state simulation has been completed
+            # coupled steady state simulation has been completed
             if OnceOnly==True:
                 TimeStepLoopFin=True
                 PELoopConv=True
@@ -1021,16 +1056,38 @@ if CoupledSim==1:
             # adjust the heat flux scaling ratio according to the mixing-cup P/E
             if PELoopConv==False:
                 PE_now=MixingCupPE
+                # at least two iterations are needed
                 if IterationPE==1:
-                    FuelScalingRatio_old=FuelScalingRatio
-                    FuelScalingRatio+=0.01
+                    if PE_now>MixingCupPEtarget:
+                        Fuel_low=FuelScalingRatio
+                        FuelScalingRatio_old=FuelScalingRatio
+                        FuelScalingRatio+=0.01
+                    else:
+                        Fuel_high=FuelScalingRatio
+                        FuelScalingRatio_old=FuelScalingRatio
+                        FuelScalingRatio-=0.01
                 else:
-                    FuelScalingRatio_new=FuelScalingRatio+(FuelScalingRatio_old-FuelScalingRatio)/(PE_old-PE_now)*(MixingCupPEtarget-PE_now)
+                    # set upper and lower limits for fuel flow rate scaling ratio
+                    if PE_now>MixingCupPEtarget:
+                        Fuel_low=FuelScalingRatio
+                    else:
+                        Fuel_high=FuelScalingRatio
+                    # calculate new fuel flow rate scaling ratio
+                    if PE_old==PE_now:
+                        FuelScalingRatio_new=FuelScalingRatio+(FuelScalingRatio_old-FuelScalingRatio)/0.0001*(MixingCupPEtarget-PE_now)
+                    else:
+                        FuelScalingRatio_new=FuelScalingRatio+(FuelScalingRatio_old-FuelScalingRatio)/(PE_old-PE_now)*(MixingCupPEtarget-PE_now)
                     FuelScalingRatio_old=FuelScalingRatio
-                    FuelScalingRatio=FuelScalingRatio_new
-                # update P/E and interation step
+                    # fuel flow rate scaling ratio cannot exceed the range of the two limits
+                    if (Fuel_low!=0 and Fuel_high!=0):
+                        if FuelScalingRatio_new<Fuel_low or FuelScalingRatio_new>Fuel_high:
+                            FuelScalingRatio=(Fuel_low+Fuel_high)/2.0
+                        else:
+                            FuelScalingRatio=FuelScalingRatio_new
+                    else:
+                        FuelScalingRatio=FuelScalingRatio_new
+                # store current P/E value for the next iteration
                 PE_old=PE_now
-                IterationPE+=1
                 print '    Mixing-cup P/E: '+ str(MixingCupPE)
             # print the P/E results
             else:
@@ -1051,16 +1108,12 @@ if CoupledSim==1:
         if IterationTimeStep==MaxTimeStep:
             TimeStepLoopFin=True
             Flag=0
-        # standalone P/E shooting simulation has been completed
+        # coupled P/E shooting simulation has been completed
         if PEOnly==True:
             TimeStepLoopFin=True
             print '#### Coupled P/E shooting simulation of case: (' + CaseName + ') is completed ####'
-        # advance in one more time step
-        if TimeStepLoopFin==False:
-            TimeStep+=TimeInterval
-            IterationTimeStep+=1
         # print the run length results
-        else:
+        if TimeStepLoopFin==True:
             if ExecTimeStepLoop==True:
                 if Flag==1:
                     print '#### Coupled run length simulation of case: (' + CaseName + ') is completed due to TMT maximum ####'
