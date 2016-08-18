@@ -5,21 +5,21 @@ Results	        ! resultsdir
 
 # simulation option #
 v3.1        ! coilsim version, v3.1
-COT    ! case name, original, coke, COT, PE
+PE    ! case name, original, coke, COT, PE
 1	        ! perform coupled simulation, 1.yes, 0.no
 1	        ! perform runLength simulation, 1.yes, 0.no
 0	        ! perform P/E shooting simulation, 1.yes, 0.no
 
 
 # templates #
-template_COT              ! template folder
+template_PE              ! template folder
 Reactor_Results_template.xls	    ! name of the reactor result template file in the folder
-HuajinUSC_heatflux_COT_it5.xls	    ! name of the heat flux template file
-input_variables_v3.1_COT.xlsx	        ! name of the incident radiative heat flux template file
+HuajinUSC_heatflux_PE_it4.xls	    ! name of the heat flux template file
+input_variables_v3.1_PE.xlsx	        ! name of the incident radiative heat flux template file
 
 
 # base case condition #
-1368.5255	    ! flue gas birdge wall temperature (T_fluegas) in base case (K)
+1368.5364	    ! flue gas birdge wall temperature (T_fluegas) in base case (K)
 14157.0         ! total heat release (Q_release) in base case (kW)
 725.821542	    ! flue gas flow rate (F_fluegas) in base case (kmol/h)
 1               ! fuel gas flow rate scaling factor
@@ -30,7 +30,7 @@ input_variables_v3.1_COT.xlsx	        ! name of the incident radiative heat flux
 200	    ! time step interval (h)
 50	    ! maximum run length time step
 1125	! end-of-run criteria TMT (C)
-4.46	! end-of-run criteria CIP (atm)
+3.46	! end-of-run criteria CIP (atm)
 0.50	! coking rate scaling factor
 
 
@@ -44,13 +44,14 @@ input_variables_v3.1_COT.xlsx	        ! name of the incident radiative heat flux
 # convergence #
 0.5	        ! TMT relaxation factor
 0.1	        ! incident scaling relaxation factor
-15          ! Maximum P/E iteration
+30          ! Maximum P/E iteration
 50	        ! Maximum TMT iteration
 20	        ! Maximum CIP iteration
 0.0005	    ! P/E convergence treshold 
 1	        ! TMT convergence treshold
 0.005	    ! CIP convergence treshold
 0.1	        ! furnace heat balance treshold
+0.00005    ! dynamic fuel adjusting factor used in P/E loop
 
 
 # geometry info #
@@ -60,20 +61,27 @@ input_variables_v3.1_COT.xlsx	        ! name of the incident radiative heat flux
 
 
 # feedstock mass flow rate (kg/h) #
-352.764,335.827,327.743,320.917,316.200,315.062,317.582,322.999,330.160,337.655,347.098,351.854,335.031,325.960,319.874,315.001,313.837,316.856,322.756,329.806,338.055,346.943
+351.697,336.053,328.250,321.592,316.875,315.636,317.709,322.796,329.838,336.870,346.137,351.079,335.599,326.743,320.651,315.852,314.507,317.121,322.700,329.207,337.199,345.869
+
 
 
 original
 329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090
-feedstock 10+
-361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999
-feedstock 10-
-296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181
+
 coke
 366.201,338.780,327.189,316.456,308.640,307.943,312.185,321.119,331.493,341.821,351.742,366.350,337.416,324.029,314.813,307.877,306.476,311.556,321.048,331.779,343.341,351.726
+
 COT
 352.764,335.827,327.743,320.917,316.200,315.062,317.582,322.999,330.160,337.655,347.098,351.854,335.031,325.960,319.874,315.001,313.837,316.856,322.756,329.806,338.055,346.943
+
 PE
 351.697,336.053,328.250,321.592,316.875,315.636,317.709,322.796,329.838,336.870,346.137,351.079,335.599,326.743,320.651,315.852,314.507,317.121,322.700,329.207,337.199,345.869
+
 TMT
 375.682,340.299,326.017,312.098,303.496,303.231,308.321,319.853,334.179,345.319,355.113,376.433,338.290,321.350,310.307,303.058,301.884,307.760,319.406,335.165,347.341,355.378
+
+feedstock 10+
+361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999,361.999
+
+feedstock 10-
+296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181,296.181

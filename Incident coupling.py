@@ -1,4 +1,4 @@
-import xlrd,shutil,time,math,sys,subprocess,xlwt,csv,numpy as np,os
+import xlrd,shutil,time,math,sys,subprocess,_subprocess,xlwt,csv,numpy as np,os
 from numpy import *
 
 
@@ -181,7 +181,11 @@ def SimulateReactors():
                 FileExp.close()
         # change directory and run COILSIM1D
         os.chdir(WorkDir)
-        subprocess.call(['Coilsim.exe'])
+        # run bat to hide the cmd window
+        info = subprocess.STARTUPINFO()
+        info.dwFlags = _subprocess.CREATE_NEW_CONSOLE | _subprocess.STARTF_USESHOWWINDOW
+        info.wShowWindow = _subprocess.SW_HIDE
+        subprocess.call(['call.bat'],startupinfo=info)
         os.chdir(os.path.pardir)
         # read COP and compare with COP setpoint to get new CIP
         for i in range(0,N_reactor):
@@ -612,59 +616,61 @@ WorkDir=variable[1]            # work dir
 ResultDir=variable[2]          # result sdir
 
 # simulation option #
-COILSIM_version=variable[6]     # coilsim version, v3.1
-CaseName=variable[7]            # case name, original, coke, COT, PE
-CoupledSim=int(variable[8])     # perform coupled simulation, 1.yes, 0.no
-RunLengthSim=int(variable[9])   # perform runLength simulation, 1.yes, 0.no
-ShootPE=int(variable[10])       # perform P/E shooting simulation, 1.yes, 0.no
+COILSIM_version=variable[6]         # coilsim version, v3.1
+CaseName=variable[7]                # case name, original, coke, COT, PE
+CoupledSim=int(variable[8])         # perform coupled simulation, 1.yes, 0.no
+RunLengthSim=int(variable[9])       # perform runLength simulation, 1.yes, 0.no
+ShootPE=int(variable[10])           # perform P/E shooting simulation, 1.yes, 0.no
+AutoDeleteData=int(variable[11])    # delete the intermedia results automatically
 
 # template #
-TempDir=variable[14]             # template folder
-FileReactor=variable[15]         # name of the reactor result template file in the folder
-FileHeatFlux=variable[16]        # name of the heat flux template file
-FileIncidentR=variable[17]       # name of the incident radiative heat flux template file
+TempDir=variable[15]             # template folder
+FileReactor=variable[16]         # name of the reactor result template file in the folder
+FileHeatFlux=variable[17]        # name of the heat flux template file
+FileIncidentR=variable[18]       # name of the incident radiative heat flux template file
 
 # base case condition #
-T_fluegas_base=float(variable[21])  # flue gas birdge wall temperature (T_fluegas) in base case (K)
-Q_release_base=float(variable[22])  # total heat release (Q_release) in base case (kW)
-F_fluegas_base=float(variable[23])  # flue gas flow rate (F_fluegas) in base case (kmol/h)
-FuelScalingRatio=float(variable[24])# fuel gas flow rate scaling factor
+T_fluegas_base=float(variable[22])  # flue gas birdge wall temperature (T_fluegas) in base case (K)
+Q_release_base=float(variable[23])  # total heat release (Q_release) in base case (kW)
+F_fluegas_base=float(variable[24])  # flue gas flow rate (F_fluegas) in base case (kmol/h)
+FuelScalingRatio=float(variable[25])# fuel gas flow rate scaling factor
 
 # run length simulation #
-StartTimeStep=int(variable[28])     # initial time step (h)
-TimeInterval=int(variable[29])      # time step interval (h)
-MaxTimeStep=int(variable[30])       # maximum run length time step
-MaxTMTset=float(variable[31])       # end-of-run criteria TMT (C)
-MaxCIPset=float(variable[32])       # end-of-run criteria CIP (atm)
-CokeCorrelation=float(variable[33]) # coking rate scaling factor
+StartTimeStep=int(variable[29])     # initial time step (h)
+TimeInterval=int(variable[30])      # time step interval (h)
+MaxTimeStep=int(variable[31])       # maximum run length time step
+MaxTMTset=float(variable[32])       # end-of-run criteria TMT (C)
+MaxCIPset=float(variable[33])       # end-of-run criteria CIP (atm)
+CokeCorrelation=float(variable[34]) # coking rate scaling factor
 
 # boundary condition #
-DilutionSteam=float(variable[37])       # dilution steam
-CIT=float(variable[38])                 # CIT (C)
-COPset=float(variable[39])              # COP set value (atm)
-MixingCupPEtarget=float(variable[40])   # mixing-up P/E set value (only for P/E shooting simulation)
+DilutionSteam=float(variable[38])       # dilution steam
+CIT=float(variable[39])                 # CIT (C)
+COPset=float(variable[40])              # COP set value (atm)
+MixingCupPEtarget=float(variable[41])   # mixing-up P/E set value (only for P/E shooting simulation)
 
 # convergence #
-TMTRelaxFactor=float(variable[44])      # TMT relaxation factor
-IncidentRelaxFactor=float(variable[45]) # incident scaling relaxation factor
-MaxPEIteration=int(variable[46])        # Maximum P/E iteration
-MaxTMTIteration=int(variable[47])       # Maximum TMT iteration
-MaxCIPIteration=int(variable[48])       # Maximum CIP iteration
-PETreshold=float(variable[49])          # P/E convergence treshold
-TMTTreshold=float(variable[50])         # TMT convergence treshold
-CIPTreshold=float(variable[51])         # CIP convergence treshold
-BalanceTreshold=float(variable[52])     # furnace heat balance treshold
+TMTRelaxFactor=float(variable[45])      # TMT relaxation factor
+IncidentRelaxFactor=float(variable[46]) # incident scaling relaxation factor
+MaxPEIteration=int(variable[47])        # Maximum P/E iteration
+MaxTMTIteration=int(variable[48])       # Maximum TMT iteration
+MaxCIPIteration=int(variable[49])       # Maximum CIP iteration
+PETreshold=float(variable[50])          # P/E convergence treshold
+TMTTreshold=float(variable[51])         # TMT convergence treshold
+CIPTreshold=float(variable[52])         # CIP convergence treshold
+BalanceTreshold=float(variable[53])     # furnace heat balance treshold
+DynamicFuelFactor=float(variable[54])   # dynamic fuel adjusting factor used in P/E loop
 
 # geometry info #
-N_reactor=int(variable[56])          # number of the reactor coil
-N_reactor_axial=int(variable[57])    # number of reactor axial points in COILSIM1D (two passes)
-N_furnace_points=int(variable[58])   # number of reactor axial points in furnace (one pass)
+N_reactor=int(variable[58])          # number of the reactor coil
+N_reactor_axial=int(variable[59])    # number of reactor axial points in COILSIM1D (two passes)
+N_furnace_points=int(variable[60])   # number of reactor axial points in furnace (one pass)
 
 # feedstock mass flow rate (kg/h)
-variable[62]=variable[62].split(',')
+variable[64]=variable[64].split(',')
 FlowRate = zeros(N_reactor)
 for i in range(0,N_reactor):
-    FlowRate[i]=variable[62][i]
+    FlowRate[i]=variable[64][i]
 Input_file.close()
 
 # other constants
@@ -846,6 +852,9 @@ if CoupledSim==0:
         IterationPE=0
         Heat_low=0
         Heat_high=0
+        ClosestPELoop=0
+        ClosestPEvalue=1.0
+        ClosestHeatFlux=0.0
         while PELoopConv==False:
             # update iteration step
             IterationPE+=1
@@ -859,9 +868,18 @@ if CoupledSim==0:
             # check the convergence of the P/E loop
             if (abs(MixingCupPE-MixingCupPEtarget)/MixingCupPEtarget)<PETreshold:
                 PELoopConv=True
+            # record the closest P/E value (in case P/E loop reaches the maximum allowed number of iterations)
+            if ClosestPEvalue > abs(MixingCupPE-MixingCupPEtarget):
+                ClosestPEvalue=abs(MixingCupPE-MixingCupPEtarget)
+                ClosestHeatFlux=HeatFluxScalingRatio
+                ClosestPELoop=IterationPE
+            # P/E loop reaches the maximum allowed iterations
             if IterationPE==MaxPEIteration:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
+                # write down the time step
+                f_MaxPE = open('MaxPE_'+ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep), 'w')
+                f_MaxPE.close()
             # standalone steady state simulation has been completed
             if OnceOnly==True:
                 TimeStepLoopFin=True
@@ -910,7 +928,14 @@ if CoupledSim==0:
             # print the P/E results
             else:
                 if ExecPEloop==True:
-                    print '    P/E loop is converged (mixing-cup P/E: ' + str(MixingCupPE) + ', heat flux scaling ratio: ' + str(HeatFluxScalingRatio) + ')'
+                    print '    P/E loop is converged (mixing-cup P/E of iteration ' + str(ClosestPELoop) + ': ' + str(ClosestPEvalue) + ', heat flux scaling ratio: ' + str(ClosestHeatFlux) + ')'
+                # delete the intermedia results automatically
+                if AutoDeleteData==1:
+                    for i in range(0,IterationPE):
+                        Path = ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_PEloop'+str(i+1)
+                        # delete all except the best folder
+                        if i!=ClosestPELoop-1 :
+                            if os.path.exists(Path): shutil.rmtree(Path)
         # ---------------- end P/E loop
         
         # print out results of the current time step
@@ -970,6 +995,10 @@ if CoupledSim==1:
         IterationPE=0
         Fuel_low=0
         Fuel_high=0
+        PELoop_TMTiterations=[None]*(MaxPEIteration)
+        ClosestPELoop=0
+        ClosestPEvalue=1.0
+        ClosestFuel=0.0
         while PELoopConv==False:
             # update iteration step
             IterationPE+=1
@@ -1045,9 +1074,20 @@ if CoupledSim==1:
             # check the convergence of the P/E loop
             if (abs(MixingCupPE-MixingCupPEtarget)/MixingCupPEtarget)<PETreshold:
                 PELoopConv=True
+            # record how many TMT iterations were carried out for in current P/E iteration
+            PELoop_TMTiterations[IterationPE-1]=IterationTMT
+            # record the closest P/E value (in case P/E loop reaches the maximum allowed number of iterations)
+            if ClosestPEvalue > abs(MixingCupPE-MixingCupPEtarget):
+                ClosestPEvalue=abs(MixingCupPE-MixingCupPEtarget)
+                ClosestFuel=FuelScalingRatio
+                ClosestPELoop=IterationPE
+            # P/E loop reaches the maximum allowed iterations
             if IterationPE==MaxPEIteration:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
+                # write down the time step
+                f_MaxPE = open(ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_MaxPE', 'w')
+                f_MaxPE.close()
             # coupled steady state simulation has been completed
             if OnceOnly==True:
                 TimeStepLoopFin=True
@@ -1061,11 +1101,11 @@ if CoupledSim==1:
                     if PE_now>MixingCupPEtarget:
                         Fuel_low=FuelScalingRatio
                         FuelScalingRatio_old=FuelScalingRatio
-                        FuelScalingRatio+=0.01
+                        FuelScalingRatio=FuelScalingRatio+DynamicFuelFactor*TimeInterval
                     else:
                         Fuel_high=FuelScalingRatio
                         FuelScalingRatio_old=FuelScalingRatio
-                        FuelScalingRatio-=0.01
+                        FuelScalingRatio=FuelScalingRatio-DynamicFuelFactor*TimeInterval
                 else:
                     # set upper and lower limits for fuel flow rate scaling ratio
                     if PE_now>MixingCupPEtarget:
@@ -1092,7 +1132,15 @@ if CoupledSim==1:
             # print the P/E results
             else:
                 if ExecPEloop==True:
-                    print '    P/E loop is converged (mixing-cup P/E: ' + str(MixingCupPE) + ', fuel scaling ratio: ' + str(FuelScalingRatio) + ')'
+                    print '    P/E loop is converged (mixing-cup P/E of iteration ' + str(ClosestPELoop) + ': ' + str(ClosestPEvalue) + ', fuel scaling ratio: ' + str(ClosestFuel) + ')'
+                # delete the intermedia results automatically
+                if AutoDeleteData==1:
+                    for i in range(0,IterationPE):
+                        for j in range(0,PELoop_TMTiterations[i]):
+                            Path = ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_PEloop'+str(i+1)+'_it'+str(j+1)
+                            # delete all except the best folder
+                            if i!=ClosestPELoop-1 or j!=PELoop_TMTiterations[ClosestPELoop-1]-1:
+                                if os.path.exists(Path): shutil.rmtree(Path)
         # ---------------- end P/E loop
         
         # print out results of the current time step
