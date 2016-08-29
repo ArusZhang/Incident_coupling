@@ -187,7 +187,7 @@ def SimulateReactors():
         for i in range(0,N_reactor):
             if FlagConvArray[i]==0:
                 CounterCIP[i]+=1
-                # write the exp.txt fil e
+                # write the exp.txt file
                 FileExp = open(WorkDir+'\\Projects\\SEI\\exp.txt','w')
                 ExpPre = '1 \n1 \n'
                 ExpNex = str(DilutionSteam)+'\n'+str(CIT)+' '
@@ -893,7 +893,7 @@ if CoupledSim==0:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
                 # write down the time step
-                f_MaxPE = open(ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_MaxPE', 'w')
+                f_MaxPE = open(ResultDir+'\\'+'MaxPE_'+CaseName+'_timestep'+str(TimeStep), 'w')
                 f_MaxPE.close()
             # standalone steady state simulation has been completed
             if OnceOnly==True:
@@ -1116,7 +1116,7 @@ if CoupledSim==1:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
                 # write down the time step
-                f_MaxPE = open(ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_MaxPE', 'w')
+                f_MaxPE = open(ResultDir+'\\'+'MaxPE_'+CaseName+'_timestep'+str(TimeStep), 'w')
                 f_MaxPE.close()
             # coupled steady state simulation has been completed
             if OnceOnly==True:
