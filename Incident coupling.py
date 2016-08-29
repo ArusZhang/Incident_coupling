@@ -878,7 +878,7 @@ if CoupledSim==0:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
                 # write down the time step
-                f_MaxPE = open('MaxPE_'+ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep), 'w')
+                f_MaxPE = open(ResultDir+'\\'+'MaxPE_'+CaseName+'_timestep'+str(TimeStep), 'w')
                 f_MaxPE.close()
             # standalone steady state simulation has been completed
             if OnceOnly==True:
@@ -1086,7 +1086,7 @@ if CoupledSim==1:
                 PELoopConv=True
                 print '!! warning: PE loop reaches maximum iteration times !!'
                 # write down the time step
-                f_MaxPE = open(ResultDir+'\\'+CaseName+'_timestep'+str(TimeStep)+'_MaxPE', 'w')
+                f_MaxPE = open(ResultDir+'\\'+'MaxPE_'+CaseName+'_timestep'+str(TimeStep), 'w')
                 f_MaxPE.close()
             # coupled steady state simulation has been completed
             if OnceOnly==True:

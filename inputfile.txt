@@ -5,17 +5,18 @@ Results	        ! resultsdir
 
 # simulation option #
 v3.1        ! coilsim version, v3.1
-PE    ! case name, original, coke, COT, PE
-1	        ! perform coupled simulation, 1.yes, 0.no
-1	        ! perform runLength simulation, 1.yes, 0.no
+5-band    ! case name, original, coke, COT, PE
+0	        ! perform coupled simulation, 1.yes, 0.no
+0	        ! perform runLength simulation, 1.yes, 0.no
 0	        ! perform P/E shooting simulation, 1.yes, 0.no
+1           ! delete the intermedia results automatically
 
 
 # templates #
-template_PE              ! template folder
+template_original              ! template folder
 Reactor_Results_template.xls	    ! name of the reactor result template file in the folder
-HuajinUSC_heatflux_PE_it4.xls	    ! name of the heat flux template file
-input_variables_v3.1_PE.xlsx	        ! name of the incident radiative heat flux template file
+HuajinUSC_heatflux_5-band.xls	    ! name of the heat flux template file
+input_variables_v3.1_original.xlsx	        ! name of the incident radiative heat flux template file
 
 
 # base case condition #
@@ -61,7 +62,7 @@ input_variables_v3.1_PE.xlsx	        ! name of the incident radiative heat flux 
 
 
 # feedstock mass flow rate (kg/h) #
-351.697,336.053,328.250,321.592,316.875,315.636,317.709,322.796,329.838,336.870,346.137,351.079,335.599,326.743,320.651,315.852,314.507,317.121,322.700,329.207,337.199,345.869
+329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090,329.090
 
 
 
