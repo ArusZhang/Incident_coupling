@@ -916,6 +916,12 @@ if CoupledSim==0:
                             HeatFluxScalingRatio=(Heat_low+Heat_high)/2.0
                         else:
                             HeatFluxScalingRatio=HeatFluxScalingRatio_new
+                    # heat flux scaling ratio between two iterations cannot be too large
+                    elif HeatFluxScalingRatio_new<HeatFluxScalingRatio_old-0.1:
+                        HeatFluxScalingRatio=HeatFluxScalingRatio_old*0.95
+                    elif HeatFluxScalingRatio_new>HeatFluxScalingRatio_old+0.1:
+                        HeatFluxScalingRatio=HeatFluxScalingRatio_old*1.05
+                    # normal
                     else:
                         HeatFluxScalingRatio=HeatFluxScalingRatio_new
                 # assign new heat flux profile
@@ -1124,6 +1130,12 @@ if CoupledSim==1:
                             FuelScalingRatio=(Fuel_low+Fuel_high)/2.0
                         else:
                             FuelScalingRatio=FuelScalingRatio_new
+                    # fuel flow rate scaling ratio between two iterations cannot be too large
+                    elif FuelScalingRatio_new<FuelScalingRatio_old-0.1:
+                        FuelScalingRatio=FuelScalingRatio_old*0.995
+                    elif FuelScalingRatio_new>FuelScalingRatio_old+0.1:
+                        FuelScalingRatio=FuelScalingRatio_old*1.005
+                    # normal
                     else:
                         FuelScalingRatio=FuelScalingRatio_new
                 # store current P/E value for the next iteration
